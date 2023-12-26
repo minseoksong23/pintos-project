@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "vaddr.h": "c",
+        "process.h": "c",
+        "__config": "cpp",
+        "__hash_table": "cpp",
+        "__locale": "cpp",
+        "tuple": "cpp",
+        "version": "cpp",
+    }
+}
