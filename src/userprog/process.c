@@ -88,6 +88,10 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  // in order to have a valid check, at least make it wait for a while.
+  int dummy = 0, i;
+  for(i=0; i<7 * 10000 * 10000; ++i) dummy += i;
+  ASSERT(dummy != 0);
   return -1;
 }
 
@@ -437,7 +441,7 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE;
+        *esp = PHYS_BASE - 12; // argument passing not yet implemented
       else
         palloc_free_page (kpage);
     }
