@@ -297,11 +297,9 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED); // check if the state is blocked
   list_insert_ordered (&ready_list, &t->elem, priority_less_func_thread, NULL); // put back on ready list
   t->status = THREAD_READY; // change the state
-  intr_set_level (old_level); // restore the interrupt level
   // ensure preemption : compare priorities of current thread and t (to be unblocked),
   if (thread_current() != idle_thread && thread_current()->priority < t->priority )
     thread_yield();
-  
   intr_set_level(old_level);
 }
 
