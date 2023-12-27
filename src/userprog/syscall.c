@@ -3,9 +3,13 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "devices/shutdown.h"
+
 
 static void syscall_handler (struct intr_frame *);
 static int memread_user (void *src, void *dst, size_t bytes);
+void sys_halt (void);
+void sys_exit (int);
 
 void
 syscall_init (void) 
@@ -16,6 +20,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
+  // Variable to store the system call number.
   int syscall_number;
   ASSERT( sizeof(syscall_number) == 4 ); // assuming x86
 
@@ -26,8 +31,57 @@ syscall_handler (struct intr_frame *f)
   }
 
   printf ("[DEBUG] system call, number = %d!\n", syscall_number);
-  thread_exit ();
 
+  // The following cases are placeholders for additional system calls,
+  // which need to be implemented and handled similarly to SYS_HALT and SYS_EXIT.
+  switch (syscall_number) {
+  case SYS_HALT:
+    {
+      sys_halt();
+      NOT_REACHED();
+      break;
+    }
+
+  case SYS_EXIT:
+    {
+      int exitcode;
+      if (memread_user(f->esp + 4, &exitcode, sizeof(exitcode)) == -1)
+        thread_exit(); // invalid memory access
+
+      sys_exit(exitcode);
+      NOT_REACHED();
+      break;
+    }
+
+  case SYS_EXEC:
+  case SYS_WAIT:
+  case SYS_CREATE:
+  case SYS_REMOVE:
+  case SYS_OPEN:
+  case SYS_FILESIZE:
+  case SYS_READ:
+  case SYS_WRITE:
+  case SYS_SEEK:
+  case SYS_TELL:
+  case SYS_CLOSE:
+
+  /* unhandled case */
+  default:
+    printf("[ERROR] Unrecognized or unimplemented system call: %d\n", syscall_number);
+    break;
+  }
+}
+
+/* shuts down the entire operating system */
+void sys_halt(void) {
+  shutdown_power_off();
+}
+
+/* terminates the current user program or thread */
+void sys_exit(int status UNUSED) {
+  printf("%s: exit(%d)\n", thread_current()->name, status);
+
+  thread_exit();
 }
 
 /* Reads a byte at user virtual address UADDR.
