@@ -45,7 +45,7 @@ get_user (const uint8_t *uaddr)
 
 /*
   Reads a consecutive `bytes` bytes of user memory with the
-  starting address `src` (uaddr), and writes to dst.
+  starting address `src` (uaddr), and writes to dst in the kernel space.
   Returns the number of bytes read, or -1 on page fault (invalid memory access)
  */
 static int
@@ -56,7 +56,7 @@ memread_user (void *src, void *dst, size_t bytes)
   for(i=0; i<bytes; i++) {
     value = get_user(src + i);
     if(value < 0) return -1; // invalid memory access (page fault), so return -1
-    *(char*)(dst + i) = value & 0xff; // consider only least significant bytes
+    *(char*)(dst + i) = value & 0xff; // only reading a byte
   }
   return (int)bytes; // return number of bytes read
 }
