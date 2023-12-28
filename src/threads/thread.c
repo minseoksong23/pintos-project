@@ -233,14 +233,6 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
- /* If the newly created thread has a higher priority than
-   * the currently running thread, then there should be an
-   * immediate context switching, for thread priority scheduling. */
-  if (priority > thread_current()->priority) {
-    // current thread releases off its running
-    thread_yield();
-  }
-
   return tid;
 }
 
