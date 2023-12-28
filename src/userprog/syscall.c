@@ -2,14 +2,25 @@
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
+#include "userprog/process.h"
 #include "threads/thread.h"
 #include "devices/shutdown.h"
+#include "threads/vaddr.h"
 
+#ifdef DEBUG
+#define _DEBUG_PRINTF(...) printf(__VA_ARGS__)
+#else
+#define _DEBUG_PRINTF(...) /* do nothing */
+#endif
 
+typedef uint32_t pid_t;
 static void syscall_handler (struct intr_frame *);
 static int memread_user (void *src, void *dst, size_t bytes);
 void sys_halt (void);
 void sys_exit (int);
+static int32_t get_user (const uint8_t *uaddr);
+pid_t sys_exec (const char *cmd_line);
+bool sys_write(int fd, const void *buffer, unsigned size, int* ret);
 
 void
 syscall_init (void) 
@@ -30,7 +41,7 @@ syscall_handler (struct intr_frame *f)
     return;
   }
 
-  printf ("[DEBUG] system call, number = %d!\n", syscall_number);
+  _DEBUG_PRINTF ("[DEBUG] system call, number = %d!\n", syscall_number);
 
   // The following cases are placeholders for additional system calls,
   // which need to be implemented and handled similarly to SYS_HALT and SYS_EXIT.
@@ -54,19 +65,47 @@ syscall_handler (struct intr_frame *f)
     }
 
   case SYS_EXEC:
+    {
+    void* cmd_line;
+    // assign command line to cmd_line while checking if read is successful
+    if (memread_user(f->esp + 4, &cmd_line, sizeof(cmd_line)) == -1) 
+      thread_exit();
+
+    int return_code = sys_exec((const char*) cmd_line);
+    f->eax = (uint32_t) return_code;
+    break;
+    }
+
   case SYS_WAIT:
   case SYS_CREATE:
   case SYS_REMOVE:
   case SYS_OPEN:
   case SYS_FILESIZE:
   case SYS_READ:
+    goto unhandled;
   case SYS_WRITE:
+    {
+    int fd, return_code;
+    const void *buffer;
+    unsigned size;
+
+    // TODO some error messages
+    if(-1 == memread_user(f->esp + 4, &fd, 4)) thread_exit();
+    if(-1 == memread_user(f->esp + 8, &buffer, 4)) thread_exit();
+    if(-1 == memread_user(f->esp + 12, &size, 4)) thread_exit();
+
+    if(!sys_write(fd, buffer, size, &return_code)) thread_exit();
+    f->eax = (uint32_t) return_code;
+    break;
+  }
+
   case SYS_SEEK:
   case SYS_TELL:
   case SYS_CLOSE:
 
   /* unhandled case */
   default:
+  unhandled:
     printf("[ERROR] Unrecognized or unimplemented system call: %d\n", syscall_number);
     break;
   }
@@ -113,4 +152,41 @@ memread_user (void *src, void *dst, size_t bytes)
     *(char*)(dst + i) = value & 0xff; // only reading a byte
   }
   return (int)bytes; // return number of bytes read
+}
+
+pid_t sys_exec (const char *cmd_line)
+{
+  _DEBUG_PRINTF ("[DEBUG] Exec : %s\n", cmdline);
+  while(true); // placeholder for now
+
+  // cmdline is an address to the character buffer, on user memory
+  // so a validation check is required
+  if (get_user((const uint8_t*) cmd_line) == -1) {
+    // invalid memory access
+    thread_exit();
+    return -1;
+  }
+
+  tid_t child_tid = process_execute(cmd_line);
+  return child_tid;
+}
+
+bool sys_write(int fd, const void *buffer, unsigned size, int* ret)
+{
+  // check if memory is valid
+  if (get_user((const uint8_t*) buffer) == -1){
+    // invalid
+    thread_exit();
+    return false;
+  }
+
+  if (fd == 1){ // stdout
+    putbuf(buffer, size);
+    *ret = size;
+    return true;
+  }
+  else {
+    printf("[Error] sys_write unimplemented\n");
+  }
+  return false;
 }
