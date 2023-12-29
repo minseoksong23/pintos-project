@@ -21,6 +21,8 @@ void sys_exit (int);
 static int32_t get_user (const uint8_t *uaddr);
 pid_t sys_exec (const char *cmd_line);
 bool sys_write(int fd, const void *buffer, unsigned size, int* ret);
+bool sys_remove(const char *file);
+static int fail_invalid_access(void);
 
 void
 syscall_init (void) 
@@ -37,7 +39,7 @@ syscall_handler (struct intr_frame *f)
 
   // The system call number is in the 32-bit word at the caller's stack pointer.
   if (memread_user(f->esp, &syscall_number, sizeof(syscall_number)) == -1) {
-    thread_exit (); // invalid memory access, terminate the user process
+    fail_invalid_access(); // invalid memory access, terminate the user process
     return;
   }
 
@@ -57,7 +59,7 @@ syscall_handler (struct intr_frame *f)
     {
       int exitcode;
       if (memread_user(f->esp + 4, &exitcode, sizeof(exitcode)) == -1)
-        thread_exit(); // invalid memory access
+        fail_invalid_access(); // invalid memory access
 
       sys_exit(exitcode);
       NOT_REACHED();
@@ -66,19 +68,28 @@ syscall_handler (struct intr_frame *f)
 
   case SYS_EXEC:
     {
-    void* cmd_line;
-    // assign command line to cmd_line while checking if read is successful
-    if (memread_user(f->esp + 4, &cmd_line, sizeof(cmd_line)) == -1) 
-      thread_exit();
+      void* cmd_line;
+      // assign command line to cmd_line while checking if read is successful
+      if (memread_user(f->esp + 4, &cmd_line, sizeof(cmd_line)) == -1) 
+        fail_invalid_access();
 
-    int return_code = sys_exec((const char*) cmd_line);
-    f->eax = (uint32_t) return_code;
-    break;
+      int return_code = sys_exec((const char*) cmd_line);
+      f->eax = (uint32_t) return_code;
+      break;
     }
 
   case SYS_WAIT:
   case SYS_CREATE:
   case SYS_REMOVE:
+    {
+      char *file_name;
+      if(-1 == memread_user(f->esp + 4, &file_name, sizeof(char*)))
+        thread_exit();
+
+      bool success = sys_remove(file_name);
+      f->eax = success ? 0 : -1; // Set the return value accordingly.
+      break;
+    }
   case SYS_OPEN:
   case SYS_FILESIZE:
   case SYS_READ:
@@ -89,10 +100,10 @@ syscall_handler (struct intr_frame *f)
     const void *buffer;
     unsigned size;
 
-    // TODO some error messages
-    if(-1 == memread_user(f->esp + 4, &fd, 4)) thread_exit();
-    if(-1 == memread_user(f->esp + 8, &buffer, 4)) thread_exit();
-    if(-1 == memread_user(f->esp + 12, &size, 4)) thread_exit();
+    // assign values appropriately and do some sanity checks
+    if(-1 == memread_user(f->esp + 4, &fd, 4)) fail_invalid_access();
+    if(-1 == memread_user(f->esp + 8, &buffer, 4)) fail_invalid_access();
+    if(-1 == memread_user(f->esp + 12, &size, 4)) fail_invalid_access();
 
     if(!sys_write(fd, buffer, size, &return_code)) thread_exit();
     f->eax = (uint32_t) return_code;
@@ -104,10 +115,10 @@ syscall_handler (struct intr_frame *f)
   case SYS_CLOSE:
 
   /* unhandled case */
-  default:
   unhandled:
-    printf("[ERROR] Unrecognized or unimplemented system call: %d\n", syscall_number);
-    break;
+    default:
+      printf("[ERROR] Unrecognized or unimplemented system call: %d\n", syscall_number);
+      break;
   }
 }
 
@@ -117,7 +128,7 @@ void sys_halt(void) {
 }
 
 /* terminates the current user program or thread */
-void sys_exit(int status UNUSED) {
+void sys_exit(int status) {
   printf("%s: exit(%d)\n", thread_current()->name, status);
 
   thread_exit();
@@ -189,4 +200,15 @@ bool sys_write(int fd, const void *buffer, unsigned size, int* ret)
     printf("[Error] sys_write unimplemented\n");
   }
   return false;
+}
+
+static int fail_invalid_access(void) 
+{
+  sys_exit (-1);
+  NOT_REACHED();
+}
+
+bool sys_remove(const char *file)
+{
+  while(1);
 }
