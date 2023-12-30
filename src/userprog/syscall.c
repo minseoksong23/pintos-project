@@ -6,6 +6,9 @@
 #include "threads/thread.h"
 #include "devices/shutdown.h"
 #include "threads/vaddr.h"
+#include "filesys/filesys.h"
+#include "filesys/file.h"
+#include "threads/palloc.h"
 
 #ifdef DEBUG
 #define _DEBUG_PRINTF(...) printf(__VA_ARGS__)
@@ -23,6 +26,7 @@ pid_t sys_exec (const char *cmd_line);
 bool sys_write(int fd, const void *buffer, unsigned size, int* ret);
 bool sys_remove(const char *file);
 static int fail_invalid_access(void);
+bool sys_create(const char* file, unsigned initial_size);
 
 void
 syscall_init (void) 
@@ -79,19 +83,21 @@ syscall_handler (struct intr_frame *f)
     }
 
   case SYS_WAIT:
+    goto unhandled;
   case SYS_CREATE:
-  case SYS_REMOVE:
-    {
-      char *file_name;
-      if(-1 == memread_user(f->esp + 4, &file_name, sizeof(char*)))
-        thread_exit();
+      {
+      const char* file;
+      unsigned initial_size;
+      bool return_code;
+      if (memread_user(f->esp + 4, &file, sizeof(file)) == -1)
+         fail_invalid_access(); // invalid memory access
+      if (memread_user(f->esp + 8, &initial_size, sizeof(initial_size)) == -1)
+         fail_invalid_access(); // invalid memory access
 
-      bool success = sys_remove(file_name);
-      f->eax = success ? 0 : -1; // Set the return value accordingly.
+      return_code = sys_create(file, initial_size);
+      f->eax = return_code;
       break;
     }
-  case SYS_OPEN:
-  case SYS_FILESIZE:
   case SYS_READ:
     goto unhandled;
   case SYS_WRITE:
@@ -174,8 +180,7 @@ pid_t sys_exec (const char *cmd_line)
   // so a validation check is required
   if (get_user((const uint8_t*) cmd_line) == -1) {
     // invalid memory access
-    thread_exit();
-    return -1;
+    return fail_invalid_access();
   }
 
   tid_t child_tid = process_execute(cmd_line);
@@ -208,7 +213,25 @@ static int fail_invalid_access(void)
   NOT_REACHED();
 }
 
-bool sys_remove(const char *file)
+bool sys_create(const char* file, unsigned initial_size) 
 {
-  while(1);
+  bool return_code;
+  // memory validation
+  if (get_user((const uint8_t*) file) == -1) {
+    return fail_invalid_access();
+  }
+  return_code = filesys_create(file, initial_size);
+  return return_code;
+}
+
+bool sys_remove(const char* file) 
+{
+  bool return_code;
+  // memory validation
+  if (get_user((const uint8_t*) file) == -1) {
+    return fail_invalid_access();
+  }
+
+  return_code = filesys_remove(file);
+  return return_code;
 }

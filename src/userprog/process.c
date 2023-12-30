@@ -78,7 +78,7 @@ start_process (void *file_name_)
   // DEBUG: Print the stack contents for debugging purposes.
   #ifdef DEBUG
     hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
-#endif
+  #endif
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -512,7 +512,7 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE
+        *esp = PHYS_BASE;
       else
         palloc_free_page (kpage);
     }
