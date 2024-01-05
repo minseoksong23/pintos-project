@@ -16,7 +16,6 @@
 #define _DEBUG_PRINTF(...) /* do nothing */
 #endif
 
-typedef uint32_t pid_t;
 static void syscall_handler (struct intr_frame *);
 static int memread_user (void *src, void *dst, size_t bytes);
 void sys_halt (void);
