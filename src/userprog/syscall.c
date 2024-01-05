@@ -213,7 +213,7 @@ static int fail_invalid_access(void)
   NOT_REACHED();
 }
 
-bool sys_create(const char* file, unsigned initial_size) 
+bool sys_create(const char* file, unsigned initial_size) // unsigned = unsigned integer
 {
   bool return_code;
   // memory validation
