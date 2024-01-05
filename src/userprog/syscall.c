@@ -11,7 +11,7 @@
 #include "threads/palloc.h"
 
 #ifdef DEBUG
-#define _DEBUG_PRINTF(...) printf(__VA_ARGS__)
+#define _DEBUG_PRINTF(...) printf(__VA_ARGS__) // this means we pass the same asgument
 #else
 #define _DEBUG_PRINTF(...) /* do nothing */
 #endif
@@ -22,6 +22,7 @@ void sys_halt (void);
 void sys_exit (int);
 static int32_t get_user (const uint8_t *uaddr);
 pid_t sys_exec (const char *cmd_line);
+int sys_wait(pid_t pid);
 bool sys_write(int fd, const void *buffer, unsigned size, int* ret);
 bool sys_remove(const char *file);
 static int fail_invalid_access(void);
@@ -81,17 +82,25 @@ syscall_handler (struct intr_frame *f)
       break;
     }
 
-  case SYS_WAIT:
-    goto unhandled;
+  case SYS_WAIT: // 3
+    {
+      pid_t pid;
+      if (memread_user(f->esp + 4, &pid, sizeof(pid_t)) == -1)
+        fail_invalid_access();
+
+      int ret = sys_wait(pid);
+      f->eax = (uint32_t) ret;
+      break;
+    }  
   case SYS_CREATE:
-      {
+    {
       const char* file;
       unsigned initial_size;
       bool return_code;
       if (memread_user(f->esp + 4, &file, sizeof(file)) == -1)
-         fail_invalid_access(); // invalid memory access
+          fail_invalid_access(); // invalid memory access
       if (memread_user(f->esp + 8, &initial_size, sizeof(initial_size)) == -1)
-         fail_invalid_access(); // invalid memory access
+          fail_invalid_access(); // invalid memory access
 
       return_code = sys_create(file, initial_size);
       f->eax = return_code;
@@ -184,6 +193,11 @@ pid_t sys_exec (const char *cmd_line)
 
   tid_t child_tid = process_execute(cmd_line);
   return child_tid;
+}
+
+int sys_wait(pid_t pid) {
+  _DEBUG_PRINTF ("[DEBUG] Wait : %d\n", pid);
+  return process_wait(pid);
 }
 
 bool sys_write(int fd, const void *buffer, unsigned size, int* ret)

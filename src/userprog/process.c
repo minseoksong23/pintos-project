@@ -132,7 +132,7 @@ process_wait (tid_t child_tid UNUSED)
 {
   // in order to have a valid check, at least make it wait for a while.
   int dummy = 0, i;
-  for(i=0; i<1000 * 10000 * 10000; ++i) dummy += i;
+  for(i=0; i<20 * 10000 * 10000; ++i) dummy += i;
   ASSERT(dummy != 0);
   return -1;
 }
