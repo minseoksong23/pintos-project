@@ -109,7 +109,7 @@ struct thread
     struct process_control_block *pcb;  /* Process Control Block */
     struct list child_list;             /* List of children processes of this thread,
                                           each elem is defined by pcb#elem */
-                                          
+    struct list file_descriptors; /* list of file descriptors thread contains */                                      
 #endif
 
     /* Owned by thread.c. */
