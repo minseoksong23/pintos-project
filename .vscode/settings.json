@@ -8,6 +8,9 @@
         "tuple": "cpp",
         "version": "cpp",
         "cstring": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "__mutex_base": "c",
+        "atomic": "c",
+        "*.inc": "c"
     }
 }
