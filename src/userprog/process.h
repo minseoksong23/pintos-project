@@ -10,7 +10,7 @@ typedef uint32_t pid_t;
 #define PID_INITIALIZING ((pid_t) - 2)
 
 
-tid_t process_execute (const char *file_name);
+tid_t process_execute (const char *cmdline);
 int process_wait (tid_t);
 void process_exit (void);
 void process_activate (void);
@@ -30,8 +30,8 @@ struct process_control_block {
   int32_t exitcode;         /* the exit code passed from exit(), when exited = true */
 
   /* Synchronization */
-  struct semaphore sema_initialization;   /* the semaphore used between start_process() and process_execute() */
-  struct semaphore sema_wait;             /* the semaphore used for wait() : parent blocks until child exits */
+  struct semaphore sema_initialization;   /* the semaphore used between start_process() and process_execute(), ensuring that start_process is completed before the process starts running */
+  struct semaphore sema_wait;             /* the semaphore used for wait() : parent blocked until child exits */
 };
 
 /* File descriptor */

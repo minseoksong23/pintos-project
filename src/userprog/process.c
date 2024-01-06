@@ -148,15 +148,12 @@ start_process (void *pcb_)
   NOT_REACHED ();
 }
 
-/** Waits for thread TID to die and returns its exit status.  If
+/* Waits for thread TID to die and returns its exit status.  If
    it was terminated by the kernel (i.e. killed due to an
    exception), returns -1.  If TID is invalid or if it was not a
    child of the calling process, or if process_wait() has already
    been successfully called for the given TID, returns -1
-   immediately, without waiting.
-
-   This function will be implemented in problem 2-2.  For now, it
-   does nothing. */
+   immediately, without waiting. */
 int
 process_wait (tid_t child_tid) 
 {
@@ -186,9 +183,9 @@ process_wait (tid_t child_tid)
   }
 
   if (child_pcb->waiting) {
-    // already waiting (the parent already called wait on child's pid)
+    // this means that the parent process is already waiting on this child process
     _DEBUG_PRINTF("[DEBUG] wait(): child found, pid = %d, but it is already waiting\n", child_tid);
-    return -1; // a process may wait for any fixed child at most once
+    return -1;
   }
   else {
     child_pcb->waiting = true;
@@ -226,8 +223,8 @@ process_exit (void)
          directory before destroying the process's page
          directory, or our active page directory will be one
          that's been freed (and cleared). */
-      cur->pagedir = NULL;
-      pagedir_activate (NULL);
+      cur->pagedir = NULL; // this page directory shouldn't be valid
+      pagedir_activate (NULL); // we do not want to use any invalid memory address
       pagedir_destroy (pd);
     }
 }

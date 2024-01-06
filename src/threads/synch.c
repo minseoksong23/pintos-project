@@ -215,7 +215,8 @@ lock_acquire (struct lock *lock)
   struct thread *t_current = thread_current();
 
   // The current process is waiting on [lock]
-  t_current->waiting_on_lock = lock;
+  if(current_lock->holder != NULL)
+    t_current->waiting_on_lock = lock;
 
   if(t_holder == NULL) {
     current_lock->priority = t_current->priority;
@@ -223,7 +224,7 @@ lock_acquire (struct lock *lock)
 
   while (t_holder != NULL && t_holder->priority < t_current->priority) {
     
-    // priority of t_holder promoted
+    // priority of t_holder promoted in the hopes that the lock will be released soon
     thread_priority_donate(t_holder, t_current->priority); 
 
     if (current_lock->priority < t_current->priority) {
