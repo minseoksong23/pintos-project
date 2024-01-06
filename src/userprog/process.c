@@ -32,7 +32,7 @@ static void argument_pushing(char **parse, int cnt, void **esp);
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
-tid_t
+pid_t
 process_execute (const char *cmdline) 
 {
   char *cmdline_copy, *file_name;
@@ -88,7 +88,7 @@ process_execute (const char *cmdline)
   // process successfully created, maintain child process list
   list_push_back (&(thread_current()->child_list), &(pcb->elem));
 
-  return tid;
+  return pcb->pid;
 }
 
 /** A thread function that loads a user process and starts it
@@ -117,20 +117,16 @@ start_process (void *pcb_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
-
+if (success){
   argument_pushing(&tmp, cnt, &if_.esp); // pushing arguments into stack
-
-  // DEBUG: Print the stack contents for debugging purposes.
-  #ifdef DEBUG
-    hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
-  #endif
+}
 
   /* Assign PCB */
   struct thread *t = thread_current();
   pcb->pid = success ? (pid_t)(t->tid) : PID_ERROR; // in our kernel, pid is just thread id
   t->pcb = pcb;
 
-  // wake up sleeping in start_process()
+  // wake up sleeping in process_execute()
   sema_up(&pcb->sema_initialization);
 
   /* If load failed, quit. */
@@ -210,6 +206,10 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
+  /* Release file for the executable */
+  if(cur->executing_file)
+    file_close(cur->executing_file);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -420,12 +420,14 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
+  /* Deny writes to executables. */
+  file_deny_write (file);
+  thread_current()->executing_file = file;
 
   success = true;
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
   return success;
 }
 

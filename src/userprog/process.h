@@ -10,7 +10,7 @@ typedef uint32_t pid_t;
 #define PID_INITIALIZING ((pid_t) - 2)
 
 
-tid_t process_execute (const char *cmdline);
+pid_t process_execute (const char *cmdline);
 int process_wait (tid_t);
 void process_exit (void);
 void process_activate (void);

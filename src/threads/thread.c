@@ -559,9 +559,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->sleep_endtick = 0;
   t->magic = THREAD_MAGIC;
   list_init(&t->locks);            // Initialize the locks list.
-#ifdef USERPROG
-  list_init(&t->file_descriptors);
-#endif
   t->waiting_on_lock = NULL;       // No lock is being waited on initially.
 
   old_level = intr_disable ();
@@ -570,8 +567,10 @@ init_thread (struct thread *t, const char *name, int priority)
 
   #ifdef USERPROG
     // init process-related informations
-    list_init(&t->child_list);
     t->pcb = NULL;
+    list_init(&t->child_list);
+    list_init(&t->file_descriptors);
+    t->executing_file = NULL;
   #endif
 }
 

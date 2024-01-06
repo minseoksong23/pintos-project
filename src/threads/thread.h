@@ -110,6 +110,8 @@ struct thread
     struct list child_list;             /* List of children processes of this thread,
                                           each elem is defined by pcb#elem */
     struct list file_descriptors; /* list of file descriptors thread contains */                                      
+    struct file *executing_file;        /* The executable file of associated process. */
+
 #endif
 
     /* Owned by thread.c. */
